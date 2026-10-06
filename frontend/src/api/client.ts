@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { ServiceEntity, ServiceSlotsResponse, UserAppointment, ProviderServiceSchedule } from '../types';
 
 export const api = axios.create({
   baseURL: 'http://localhost:8080',
