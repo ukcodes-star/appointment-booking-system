@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 interface AuthContextType {
   token: string | null;
@@ -11,57 +11,68 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function parseJwt(t: string): { sub?: string; role?: 'USER' | 'SERVICE_PROVIDER' } | null {
+  try {
+    const base64Url = t.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(window.atob(base64));
+  } catch {
+    return null;
+  }
+}
+
+interface AuthState {
+  token: string | null;
+  role: 'USER' | 'SERVICE_PROVIDER' | null;
+  email: string | null;
+}
+
+function getInitialState(): AuthState {
+  const token = localStorage.getItem('token');
+  if (!token) return { token: null, role: null, email: null };
+  const payload = parseJwt(token);
+  if (payload?.role) {
+    return { token, role: payload.role, email: payload.sub || null };
+  }
+  localStorage.removeItem('token');
+  return { token: null, role: null, email: null };
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [role, setRole] = useState<'USER' | 'SERVICE_PROVIDER' | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
-
-  const parseJwt = (t: string) => {
-    try {
-      const base64Url = t.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      return JSON.parse(window.atob(base64));
-    } catch {
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    if (token) {
-      const payload = parseJwt(token);
-      if (payload && payload.role) {
-        setRole(payload.role);
-        setEmail(payload.sub);
-      } else {
-        logout();
-      }
-    }
-  }, [token]);
+  const [auth, setAuth] = useState<AuthState>(getInitialState);
 
   const login = (newToken: string) => {
     localStorage.setItem('token', newToken);
-    setToken(newToken);
     const payload = parseJwt(newToken);
-    if (payload) {
-      setRole(payload.role);
-      setEmail(payload.sub);
-    }
+    setAuth({
+      token: newToken,
+      role: payload?.role || null,
+      email: payload?.sub || null,
+    });
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    setToken(null);
-    setRole(null);
-    setEmail(null);
+    setAuth({ token: null, role: null, email: null });
   };
 
   return (
-    <AuthContext.Provider value={{ token, role, email, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider
+      value={{
+        token: auth.token,
+        role: auth.role,
+        email: auth.email,
+        login,
+        logout,
+        isAuthenticated: !!auth.token,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth must be used within AuthProvider');

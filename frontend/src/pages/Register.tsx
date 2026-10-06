@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { authApi } from '../api/client';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -20,8 +21,12 @@ export const Register: React.FC<{ onSwitchLogin: () => void }> = ({ onSwitchLogi
       await authApi.register({ name, email, password, role });
       setSuccess('Account created successfully! You can now sign in.');
       setTimeout(onSwitchLogin, 1500);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'Registration failed');
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }

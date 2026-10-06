@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { serviceApi, providerApi } from '../api/client';
 import type { ServiceEntity, ProviderServiceSchedule, ServiceType } from '../types';
 import { PlusCircle, Clock, Calendar, CheckCircle2, AlertTriangle, Users } from 'lucide-react';
@@ -49,9 +50,29 @@ export const ProviderDashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    loadServices();
-    loadSchedule(scheduleDate);
-  }, []);
+    let ignore = false;
+    async function init() {
+      try {
+        const [servicesRes, schedRes] = await Promise.all([
+          serviceApi.getAll(),
+          providerApi.getSchedule(scheduleDate),
+        ]);
+        if (!ignore) {
+          setServices(servicesRes.data);
+          if (servicesRes.data.length > 0) {
+            setSelectedServiceId(servicesRes.data[0].id);
+          }
+          setSchedule(schedRes.data);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    init();
+    return () => {
+      ignore = true;
+    };
+  }, [scheduleDate]);
 
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +82,9 @@ export const ProviderDashboard: React.FC = () => {
       setCreateMsg({ type: 'ok', text: 'Service created successfully!' });
       setName('');
       loadServices();
-    } catch (err: any) {
-      setCreateMsg({ type: 'err', text: err.response?.data?.message || 'Failed to create service' });
+    } catch (err: unknown) {
+      const msg = axios.isAxiosError(err) ? err.response?.data?.message : null;
+      setCreateMsg({ type: 'err', text: msg || 'Failed to create service' });
     }
   };
 
@@ -72,11 +94,12 @@ export const ProviderDashboard: React.FC = () => {
     try {
       await serviceApi.setAvailability(selectedServiceId, { dayOfWeek, startTime, endTime });
       setAvailMsg({ type: 'ok', text: 'Weekly availability window saved!' });
-    } catch (err: any) {
-      if (err.response?.status === 409) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
         setAvailMsg({ type: 'err', text: 'Error: Overlapping availability window already exists for this day!' });
       } else {
-        setAvailMsg({ type: 'err', text: err.response?.data?.message || 'Failed to set availability' });
+        const msg = axios.isAxiosError(err) ? err.response?.data?.message : null;
+        setAvailMsg({ type: 'err', text: msg || 'Failed to set availability' });
       }
     }
   };

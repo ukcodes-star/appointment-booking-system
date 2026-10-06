@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { serviceApi, appointmentApi } from '../api/client';
 import type { ServiceEntity, SlotItem, UserAppointment, ServiceType } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -54,11 +55,12 @@ export const UserDashboard: React.FC = () => {
     try {
       const res = await serviceApi.getSlots(serviceId, date);
       setSlots(res.data.slots);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setSlots([]);
+      const msg = axios.isAxiosError(err) ? err.response?.data?.message : null;
       setBookingMessage({
         type: 'error',
-        text: err.response?.data?.message || 'Could not load slots for this date.',
+        text: msg || 'Could not load slots for this date.',
       });
     } finally {
       setLoadingSlots(false);
@@ -91,16 +93,17 @@ export const UserDashboard: React.FC = () => {
       if (selectedService) {
         fetchSlots(selectedService.id, selectedDate);
       }
-    } catch (err: any) {
-      if (err.response?.status === 409) {
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
         setBookingMessage({
           type: 'error',
           text: 'This slot was just booked by another user! Please pick another slot.',
         });
       } else {
+        const msg = axios.isAxiosError(err) ? err.response?.data?.message : null;
         setBookingMessage({
           type: 'error',
-          text: err.response?.data?.message || 'Failed to book slot.',
+          text: msg || 'Failed to book slot.',
         });
       }
     }
@@ -115,12 +118,6 @@ export const UserDashboard: React.FC = () => {
       console.error(err);
     }
   };
-
-  useEffect(() => {
-    if (tab === 'my-bookings' && isAuthenticated) {
-      loadMyAppointments();
-    }
-  }, [tab, isAuthenticated]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -137,7 +134,10 @@ export const UserDashboard: React.FC = () => {
         </button>
         {isAuthenticated && (
           <button
-            onClick={() => setTab('my-bookings')}
+            onClick={() => {
+              setTab('my-bookings');
+              loadMyAppointments();
+            }}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
               tab === 'my-bookings' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'
             }`}

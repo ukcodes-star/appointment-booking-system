@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/client';
 import { Lock, Mail, AlertCircle } from 'lucide-react';
@@ -18,8 +19,12 @@ export const Login: React.FC<{ onDone: () => void; onSwitchRegister: () => void 
       const res = await authApi.login({ email, password });
       login(res.data.token);
       onDone();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'Invalid email or password');
+      } else {
+        setError('An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }

@@ -19,8 +19,8 @@ api.interceptors.request.use((config) => {
 
 // Centralized API calls
 export const authApi = {
-  register: (data: any) => api.post('/auth/register', data),
-  login: (data: any) => api.post<{ token: string }>('/auth/login', data),
+  register: (data: Record<string, unknown>) => api.post('/auth/register', data),
+  login: (data: Record<string, unknown>) => api.post<{ token: string }>('/auth/login', data),
 };
 
 export const serviceApi = {
