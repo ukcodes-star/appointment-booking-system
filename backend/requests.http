@@ -1,0 +1,22 @@
+### 1. Register Provider
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "Dr Smith",
+  "email": "dr@clinic.com",
+  "password": "password123",
+  "role": "SERVICE_PROVIDER"
+}
+
+### 2. Login
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "dr@clinic.com",
+  "password": "password123"
+}
+
+### 3. Get Services
+GET http://localhost:8080/services
